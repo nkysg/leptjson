@@ -1,4 +1,5 @@
 public class LeptContext {
+    public static final char NONE = 0;
     private String json;
     int pos;
     public LeptContext(String json) {
@@ -17,14 +18,14 @@ public class LeptContext {
         if (hasNext()) {
             return json.charAt(pos++);
         }
-        return 0;
+        return NONE;
     }
 
     private char peek() {
         if (hasNext()){
             return json.charAt(pos);
         }
-        return 0;
+        return NONE;
     }
 
     private void lept_parse_whitespace() {
@@ -61,7 +62,7 @@ public class LeptContext {
                 return lept_parse_false(value);
            // case '"':
              //   return lept_parse_string(value);
-            case (char)-1:
+            case NONE:
                 return LeptParseResult.LEPT_PARSE_EXPECT_VALUE;
             default:
                 return lept_parse_number(value);
