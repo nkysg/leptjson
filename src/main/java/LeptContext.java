@@ -2,7 +2,7 @@ public class LeptContext {
     private String json;
     int pos;
     public LeptContext(String json) {
-        this.json = json.trim();
+        this.json = json;
         pos = 0;
     }
 
@@ -17,54 +17,131 @@ public class LeptContext {
         if (hasNext()) {
             return json.charAt(pos++);
         }
-        return (char)-1;
+        return 0;
     }
 
     private char peek() {
         if (hasNext()){
             return json.charAt(pos);
         }
-        return (char)-1;
+        return 0;
     }
 
-    public LeptParseError lept_parse(LeptValue lept_value) {
-        lept_value.setLeptType(LeptType.LEPT_NULL);
-        return lept_parse_value(lept_value);
-    }
-
-    private LeptParseError lept_parse_value(LeptValue lept_value) {
-        if (!hasNext()) {
-            return LeptParseError.LEPT_PARSE_EXPECT_VALUE;
+    private void lept_parse_whitespace() {
+        while (pos < json.length() && Character.isWhitespace(json.charAt(pos))) {
+            pos++;
         }
-        char ch = next();
+    }
+
+    public LeptParseResult lept_parse(LeptValue value) {
+        value.setLeptType(LeptType.LEPT_NULL);
+        lept_parse_whitespace();
+        LeptParseResult result = lept_parse_value(value);
+        if (result == LeptParseResult.LEPT_PARSE_OK) {
+            lept_parse_whitespace();
+            if (hasNext()) {
+                value.setLeptType(LeptType.LEPT_NULL);
+                result = LeptParseResult.LEPT_PARSE_ROOT_NOT_SINGULAR;
+            }
+        }
+        return result;
+    }
+
+    private LeptParseResult lept_parse_value(LeptValue value) {
+        if (!hasNext()) {
+            return LeptParseResult.LEPT_PARSE_EXPECT_VALUE;
+        }
+        char ch = peek();
         switch (ch) {
             case 'n':
-                return lept_parse_null(lept_value);
+                return lept_parse_null(value);
             case 't':
-                return lept_parse_true(lept_value);
+                return lept_parse_true(value);
             case 'f':
-                return lept_parse_false(lept_value);
+                return lept_parse_false(value);
+           // case '"':
+             //   return lept_parse_string(value);
+            case (char)-1:
+                return LeptParseResult.LEPT_PARSE_EXPECT_VALUE;
             default:
-                return LeptParseError.LEPT_PARSE_INVALID_VALUE;
+                return lept_parse_number(value);
         }
     }
 
-    private LeptParseError lept_parse_null(LeptValue lept_value) {
-        if (next() != 'u' || next() !='l' || next() != 'l') {
-            return LeptParseError.LEPT_PARSE_INVALID_VALUE;
+    private LeptParseResult lept_parse_null(LeptValue value) {
+        if (next() !='n' || next() != 'u' || next() !='l' || next() != 'l') {
+            return LeptParseResult.LEPT_PARSE_INVALID_VALUE;
         }
-        lept_value.setLeptType(LeptType.LEPT_NULL);
+        value.setLeptType(LeptType.LEPT_NULL);
         if (hasNext()) {
-            return LeptParseError.LEPT_PARSE_ROOT_NOT_SINGULAR;
+            return LeptParseResult.LEPT_PARSE_ROOT_NOT_SINGULAR;
         }
-        return LeptParseError.LEPT_PARSE_OK;
+        return LeptParseResult.LEPT_PARSE_OK;
     }
 
-    private LeptParseError lept_parse_true(LeptValue lept_value) {
-        return LeptParseError.LEPT_PARSE_OK;
+    private LeptParseResult lept_parse_true(LeptValue value) {
+        if (next() !='t' || next() != 'r' || next() != 'u' || next() != 'e') {
+            return LeptParseResult.LEPT_PARSE_INVALID_VALUE;
+        }
+        value.setLeptType(LeptType.LEPT_TRUE);
+        if (hasNext()) {
+            return LeptParseResult.LEPT_PARSE_ROOT_NOT_SINGULAR;
+        }
+        return LeptParseResult.LEPT_PARSE_OK;
     }
 
-    private LeptParseError lept_parse_false(LeptValue lept_value) {
-        return LeptParseError.LEPT_PARSE_OK;
+    private LeptParseResult lept_parse_false(LeptValue value) {
+        if (next() !='f' || next() != 'a' || next() != 'l' || next() != 's' || next() != 'e') {
+            return LeptParseResult.LEPT_PARSE_INVALID_VALUE;
+        }
+        value.setLeptType(LeptType.LEPT_FALSE);
+        if (hasNext()) {
+            return LeptParseResult.LEPT_PARSE_ROOT_NOT_SINGULAR;
+        }
+        return LeptParseResult.LEPT_PARSE_OK;
+    }
+
+    private LeptParseResult lept_parse_number(LeptValue value) {
+        char ch;
+        int start_idx = pos;
+        if (peek() == '-') {
+            next();
+        }
+        if (peek() == '0') {
+            next();
+        } else {
+            ch = peek();
+            if (!(ch >= '1' && ch <= '9')) {
+                return LeptParseResult.LEPT_PARSE_INVALID_VALUE;
+            }
+            for (; Character.isDigit(peek()); ) next();
+        }
+
+        if (peek() == '.') {
+            next();
+            if (!Character.isDigit((peek()))) {
+                return LeptParseResult.LEPT_PARSE_INVALID_VALUE;
+            }
+            for (; Character.isDigit(peek());) next();
+        }
+        ch = peek();
+        if (ch == 'e' || ch == 'E') {
+            next();
+            ch = peek();
+            if (ch == '+' || ch == '-') {
+                next();
+            }
+            if (!Character.isDigit(peek())) {
+                return LeptParseResult.LEPT_PARSE_INVALID_VALUE;
+            }
+            for (; Character.isDigit(peek());) next();
+        }
+        double val = Double.parseDouble(json.substring(start_idx, pos));
+        if (Double.isInfinite(val)) {
+            return LeptParseResult.LEPT_PARSE_NUMBER_TOO_BIG;
+        }
+        value.setLeptType(LeptType.LEPT_NUMBER);
+        value.setLeptDouble(json.substring(start_idx, pos));
+        return LeptParseResult.LEPT_PARSE_OK;
     }
 }
