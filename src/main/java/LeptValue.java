@@ -1,9 +1,12 @@
 import java.util.List;
+import java.util.Map;
 
 public class LeptValue {
     private LeptType leptType;
     private String str;
     private List<LeptValue> list;
+
+    private List<Pair<String, LeptValue>> pairs;
 
     public LeptValue() {
     }
@@ -33,7 +36,9 @@ public class LeptValue {
     }
 
     public void setList(List<LeptValue> list) {
-        this.list = list;
+        if (leptType == LeptType.LEPT_ARRAY) {
+            this.list = list;
+        }
     }
 
     public LeptValue getIndexValue(int index) {
@@ -49,4 +54,25 @@ public class LeptValue {
         }
         return list.size();
     }
+
+    public int get_object_size() {
+        if (leptType != LeptType.LEPT_OBJECT || pairs == null) {
+            return 0;
+        }
+        return pairs.size();
+    }
+
+    public void setPairs(List<Pair<String, LeptValue>> pairs) {
+        if (leptType == LeptType.LEPT_OBJECT) {
+            this.pairs = pairs;
+        }
+    }
+
+    public Pair<String, LeptValue> getIndexPair(int index) {
+        if (leptType != LeptType.LEPT_OBJECT || pairs == null || index >= pairs.size()) {
+            return null;
+        }
+        return pairs.get(index);
+    }
+
 }

@@ -1,7 +1,4 @@
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.Stack;
+import java.util.*;
 
 public class LeptContext {
     public static final char NONE = 0;
@@ -9,11 +6,13 @@ public class LeptContext {
     int pos;
     LeptStack stack;
     Stack<LeptValue> stkv;
+    Stack<Pair<String,LeptValue>> stkpair;
     public LeptContext(String json) {
         this.json = json;
         pos = 0;
         stack = new LeptStack();
         stkv = new Stack<>();
+        stkpair = new Stack<>();
     }
 
     private boolean hasNext() {
@@ -85,6 +84,8 @@ public class LeptContext {
 
             case '[':
                 return lept_parse_array(value);
+            case '{':
+                return lept_parse_object(value);
             default:
                 return lept_parse_number(value);
         }
@@ -233,5 +234,61 @@ public class LeptContext {
             }
         }
 
+    }
+
+    private LeptParseResult lept_parse_object(LeptValue value) {
+        int size = 0;
+        LeptParseResult ret = LeptParseResult.LEPT_PARSE_OK;
+        char ch = next();
+        assert ch == '{';
+        lept_parse_whitespace();
+        if (peek() == '}') {
+            next();
+            value.setLeptType(LeptType.LEPT_OBJECT);
+            return LeptParseResult.LEPT_PARSE_OK;
+        }
+        for (;;) {
+            LeptValue e = new LeptValue();
+            e.setLeptType(LeptType.LEPT_NULL);
+            if (peek() != '"') {
+                return LeptParseResult.LEPT_PARSE_MISS_KEY;
+            }
+            if ((ret = lept_parse_value(e)) != LeptParseResult.LEPT_PARSE_OK) {
+                return ret;
+            }
+            String key = e.getStr();
+           // System.out.println("key " + key);
+            lept_parse_whitespace();
+            if (peek() != ':') {
+                return LeptParseResult.LEPT_PARSE_MISS_COLON;
+            } else {
+                next();
+            }
+            // System.out.println("pos " + json.substring(pos));
+            e = new LeptValue();
+            if ((ret = lept_parse_value(e)) != LeptParseResult.LEPT_PARSE_OK) {
+               // System.out.println("error " + json.substring(0, pos));
+                return ret;
+            }
+            size++;
+            stkpair.push(new Pair<>(key, e));
+            lept_parse_whitespace();
+            if (peek() == ',') {
+                next();
+                lept_parse_whitespace();
+            } else if (peek() == '}') {
+                next();
+                List<Pair<String, LeptValue>> pairs = new ArrayList<>(size);
+                for (int i = 0; i < size; i++) {
+                    pairs.add(stkpair.pop());
+                }
+                Collections.reverse(pairs);
+                value.setLeptType(LeptType.LEPT_OBJECT);
+                value.setPairs(pairs);
+                return LeptParseResult.LEPT_PARSE_OK;
+            } else {
+                return LeptParseResult.LEPT_PARSE_MISS_COMMA_OR_CURLY_BRACKET;
+            }
+        }
     }
 }
