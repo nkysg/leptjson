@@ -170,7 +170,26 @@ public class LeptContextTest {
         assertEquals(value.getIndexPair(2).getValue().getLeptType(), LeptType.LEPT_TRUE);
         assertEquals(value.getIndexPair(3).getKey(), "i");
         assertEquals(value.getIndexPair(3).getValue().getLeptType(), LeptType.LEPT_NUMBER);
-
+        assertEquals(value.getIndexPair(3).getValue().getLeptNumber(),123, 1e-6);
+        assertEquals(value.getIndexPair(4).getKey(), "s");
+        assertEquals(value.getIndexPair(4).getValue().getLeptType(), LeptType.LEPT_STRING);
+        assertEquals(value.getIndexPair(4).getValue().getStr(), "abc");
+        assertEquals(value.getIndexPair(5).getKey(), "a");
+        assertEquals(value.getIndexPair(5).getValue().getLeptType(), LeptType.LEPT_ARRAY);
+        assertEquals(value.getIndexPair(5).getValue().get_array_size(), 3);
+        for (int i = 0; i < value.getIndexPair(5).getValue().get_array_size(); i++) {
+            assertEquals(value.getIndexPair(5).getValue().getIndexValue(i).getLeptType(), LeptType.LEPT_NUMBER);
+            assertEquals(value.getIndexPair(5).getValue().getIndexValue(i).getLeptNumber(), i + 1, 1e-6);
+        }
+        assertEquals(value.getIndexPair(6).getKey(), "o");
+        assertEquals(value.getIndexPair(6).getValue().getLeptType(), LeptType.LEPT_OBJECT);
+        assertEquals(value.getIndexPair(6).getValue().get_object_size(), 3);
+        for (int i = 0; i < 3; i++) {
+            String str = String.valueOf(i + 1);
+            assertEquals(value.getIndexPair(6).getValue().getIndexPair(i).getKey(), str);
+            assertEquals(value.getIndexPair(6).getValue().getIndexPair(i).getValue().getLeptType(), LeptType.LEPT_NUMBER);
+            assertEquals(value.getIndexPair(6).getValue().getIndexPair(i).getValue().getLeptNumber(), i + 1, 1e-6);
+        }
     }
 
     private void test_error(LeptParseResult error, String json) {
